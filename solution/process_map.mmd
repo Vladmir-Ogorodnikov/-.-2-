@@ -1,0 +1,32 @@
+%% Процесс «Заявка на закупку» — восстановлен по журналу students (1).csv
+%% Числа на рёбрах — количество переходов в журнале. Ромбы — XOR-развилки (добавлены на схему; в журнале это Result задания и Amount заявки).
+flowchart LR
+    start(["Регистрация заявки<br/>system · process_started · 1000"])
+    primary["Первичная проверка<br/>специалист · task_completed · 1174 события"]
+    gw1{{"XOR"}}
+    manager["Согласование руководителем<br/>руководитель · task_completed · 1129 событий"]
+    gw2{{"XOR"}}
+    budget["Проверка бюджета<br/>финансы · task_completed · 911 · всегда accept"]
+    gw3{{"XOR · Σ"}}
+    addon["Дополнительное согласование<br/>директор · task_completed · 209 · всегда accept"]
+    execution["Исполнение закупки<br/>закупки · task_completed · 911 · всегда accept"]
+    done(["Заявка выполнена<br/>system · process_completed · 911"])
+    rejected[["Заявка отклонена<br/>system · process_completed · 63 (45 + 18)"]]
+    cancelled[["Заявка отменена<br/>system · process_completed · 26"]]
+    rework["Доработка заявки<br/>заявитель · task_completed · 174 события в 156 экз."]
+
+    start -->|"1000"| primary
+    primary --> gw1
+    gw1 -->|"accept · 1129"| manager
+    gw1 -->|"reject · 45"| rejected
+    manager --> gw2
+    gw2 -->|"accept · 911"| budget
+    gw2 -->|"return · 174"| rework
+    rework -->|"возврат на повторную проверку (цикл, ≤ 2 итераций)"| primary
+    gw2 -->|"reject · 18"| rejected
+    gw2 -->|"cancel · 26"| cancelled
+    budget --> gw3
+    gw3 -->|"Amount ≥ 150 000 руб. · 209"| addon
+    addon -->|"accept · 209"| execution
+    gw3 -->|"Amount < 150 000 руб. · 702"| execution
+    execution -->|"fulfilled · 911"| done
